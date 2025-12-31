@@ -82,7 +82,24 @@ class DataStore {
 
     // Usage tracking
     getUsageKey(perkId, year, month) {
-        return `${perkId}-${year}-${month}`;
+        const perk = this.getPerk(perkId);
+        if (!perk) return `${perkId}-${year}-${month}`;
+
+        // For period-based perks, use period identifier instead of month
+        switch (perk.cadence) {
+            case 'monthly':
+                return `${perkId}-${year}-${month}`;
+            case 'quarterly':
+                const quarter = Math.ceil(month / 3);
+                return `${perkId}-${year}-Q${quarter}`;
+            case 'semi-annually':
+                const half = month <= 6 ? 'H1' : 'H2';
+                return `${perkId}-${year}-${half}`;
+            case 'annually':
+                return `${perkId}-${year}`;
+            default:
+                return `${perkId}-${year}-${month}`;
+        }
     }
 
     getUsage(perkId, year, month) {
@@ -451,22 +468,9 @@ class App {
     }
 
     isPerkActiveInMonth(perk, year, month) {
-        // Determine if a perk should be shown for the given month based on its cadence
-        switch (perk.cadence) {
-            case 'monthly':
-                return true;
-            case 'quarterly':
-                // Active in Jan (1), Apr (4), Jul (7), Oct (10)
-                return month === 1 || month === 4 || month === 7 || month === 10;
-            case 'semi-annually':
-                // Active in Jan (1), Jul (7)
-                return month === 1 || month === 7;
-            case 'annually':
-                // Active in Jan (1)
-                return month === 1;
-            default:
-                return true;
-        }
+        // All perks are active in every month within their period
+        // They'll show as completed once used, based on period-based usage tracking
+        return true;
     }
 
     formatCadence(cadence) {
