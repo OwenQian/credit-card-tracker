@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Card Perks Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💳 Credit Card Perks Tracker</h1>
+            <p class="subtitle">Track and manage your credit card benefits</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="checklist">Monthly Checklist</button>
+            <button class="tab-btn" data-tab="cards">Manage Cards</button>
+            <button class="tab-btn" data-tab="perks">Manage Perks</button>
+        </nav>
+
+        <!-- Monthly Checklist Tab -->
+        <div id="checklist-tab" class="tab-content active">
+            <div class="month-selector">
+                <button id="prev-month" class="month-nav-btn">←</button>
+                <h2 id="current-month-display"></h2>
+                <button id="next-month" class="month-nav-btn">→</button>
+            </div>
+
+            <div id="perks-checklist" class="checklist">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+
+        <!-- Manage Cards Tab -->
+        <div id="cards-tab" class="tab-content">
+            <div class="section-header">
+                <h2>Credit Cards</h2>
+                <button id="add-card-btn" class="btn btn-primary">+ Add Card</button>
+            </div>
+
+            <div id="cards-list" class="cards-list">
+                <!-- Dynamically populated -->
+            </div>
+
+            <!-- Add/Edit Card Modal -->
+            <div id="card-modal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="card-modal-title">Add Credit Card</h3>
+                        <button class="close-btn">&times;</button>
+                    </div>
+                    <form id="card-form">
+                        <input type="hidden" id="card-id">
+                        <div class="form-group">
+                            <label for="card-name">Card Name *</label>
+                            <input type="text" id="card-name" required placeholder="e.g., Chase Sapphire Reserve">
+                        </div>
+                        <div class="form-group">
+                            <label for="card-issuer">Issuer</label>
+                            <input type="text" id="card-issuer" placeholder="e.g., Chase, Amex">
+                        </div>
+                        <div class="form-group">
+                            <label for="card-color">Card Color</label>
+                            <input type="color" id="card-color" value="#3b82f6">
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Card</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Perks Tab -->
+        <div id="perks-tab" class="tab-content">
+            <div class="section-header">
+                <h2>Credit Card Perks</h2>
+                <button id="add-perk-btn" class="btn btn-primary">+ Add Perk</button>
+            </div>
+
+            <div id="perks-list" class="perks-list">
+                <!-- Dynamically populated -->
+            </div>
+
+            <!-- Add/Edit Perk Modal -->
+            <div id="perk-modal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="perk-modal-title">Add Perk</h3>
+                        <button class="close-btn">&times;</button>
+                    </div>
+                    <form id="perk-form">
+                        <input type="hidden" id="perk-id">
+                        <div class="form-group">
+                            <label for="perk-card">Credit Card *</label>
+                            <select id="perk-card" required>
+                                <option value="">Select a card...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="perk-name">Perk Name *</label>
+                            <input type="text" id="perk-name" required placeholder="e.g., $300 Travel Credit">
+                        </div>
+                        <div class="form-group">
+                            <label for="perk-description">Description</label>
+                            <textarea id="perk-description" rows="3" placeholder="Details about this perk..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="perk-limit">Usage Limit per Period</label>
+                            <input type="number" id="perk-limit" min="1" value="1" placeholder="e.g., 1">
+                            <small>How many times can this perk be used per reset period?</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="perk-cadence">Reset Cadence *</label>
+                            <select id="perk-cadence" required>
+                                <option value="monthly">Monthly (1st of each month)</option>
+                                <option value="quarterly">Quarterly (Jan 1, Apr 1, Jul 1, Oct 1)</option>
+                                <option value="semi-annually">Semi-Annually (Jan 1, Jul 1)</option>
+                                <option value="annually">Annually (Jan 1)</option>
+                            </select>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary cancel-btn">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Perk</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
