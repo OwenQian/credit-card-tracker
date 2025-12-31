@@ -144,6 +144,8 @@ class App {
         this.renderChecklist();
         this.renderCards();
         this.renderPerks();
+        this.updateDataStats();
+        this.initGoogleDrive();
     }
 
     setupEventListeners() {
@@ -175,6 +177,11 @@ class App {
                 if (e.target === modal) this.closeModals();
             });
         });
+
+        // Data management
+        document.getElementById('export-btn').addEventListener('click', () => this.exportData());
+        document.getElementById('import-file').addEventListener('change', (e) => this.importData(e));
+        document.getElementById('clear-all-data-btn').addEventListener('click', () => this.clearAllData());
     }
 
     switchTab(tabName) {
@@ -495,6 +502,426 @@ class App {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // Data Management
+    exportData() {
+        const data = {
+            cards: this.store.cards,
+            perks: this.store.perks,
+            usage: this.store.usage,
+            exportDate: new Date().toISOString(),
+            version: '1.0'
+        };
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `credit-card-perks-backup-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        this.showStatus('import-status', 'Data exported successfully!', 'success');
+        setTimeout(() => this.hideStatus('import-status'), 3000);
+    }
+
+    async importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+
+            // Validate data structure
+            if (!data.cards || !data.perks || !data.usage) {
+                throw new Error('Invalid backup file format');
+            }
+
+            // Confirm before overwriting
+            if (!confirm('This will replace all current data. Continue?')) {
+                event.target.value = '';
+                return;
+            }
+
+            // Import data
+            this.store.cards = data.cards;
+            this.store.perks = data.perks;
+            this.store.usage = data.usage;
+            this.store.save('cards', this.store.cards);
+            this.store.save('perks', this.store.perks);
+            this.store.save('usage', this.store.usage);
+
+            // Refresh UI
+            this.renderCards();
+            this.renderPerks();
+            this.renderChecklist();
+            this.updateDataStats();
+
+            this.showStatus('import-status', 'Data imported successfully!', 'success');
+            setTimeout(() => this.hideStatus('import-status'), 3000);
+        } catch (error) {
+            this.showStatus('import-status', `Import failed: ${error.message}`, 'error');
+        }
+
+        event.target.value = '';
+    }
+
+    clearAllData() {
+        if (!confirm('This will permanently delete ALL your data (cards, perks, usage). This cannot be undone. Are you sure?')) {
+            return;
+        }
+
+        if (!confirm('Are you REALLY sure? This action is irreversible!')) {
+            return;
+        }
+
+        localStorage.clear();
+        this.store.cards = [];
+        this.store.perks = [];
+        this.store.usage = {};
+
+        this.renderCards();
+        this.renderPerks();
+        this.renderChecklist();
+        this.updateDataStats();
+
+        alert('All data has been cleared.');
+    }
+
+    updateDataStats() {
+        document.getElementById('stat-cards').textContent = this.store.cards.length;
+        document.getElementById('stat-perks').textContent = this.store.perks.length;
+        document.getElementById('stat-usage').textContent = Object.keys(this.store.usage).length;
+    }
+
+    showStatus(elementId, message, type) {
+        const element = document.getElementById(elementId);
+        element.textContent = message;
+        element.className = `status-message ${type}`;
+    }
+
+    hideStatus(elementId) {
+        const element = document.getElementById(elementId);
+        element.className = 'status-message';
+    }
+
+    // Google Drive Integration
+    initGoogleDrive() {
+        this.gdriveManager = new GoogleDriveManager(this);
+    }
+}
+
+// Google Drive Manager
+class GoogleDriveManager {
+    constructor(app) {
+        this.app = app;
+        this.CLIENT_ID = ''; // User needs to set this up
+        this.API_KEY = ''; // User needs to set this up
+        this.DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+        this.SCOPES = 'https://www.googleapis.com/auth/drive.file';
+        this.FILE_NAME = 'credit-card-perks-data.json';
+        this.tokenClient = null;
+        this.gapiInited = false;
+        this.gisInited = false;
+        this.accessToken = null;
+        this.fileId = localStorage.getItem('gdrive_file_id');
+        this.autoSync = localStorage.getItem('auto_sync') === 'true';
+
+        this.setupEventListeners();
+        this.maybeInitialize();
+    }
+
+    setupEventListeners() {
+        document.getElementById('gdrive-connect-btn').addEventListener('click', () => this.handleAuthClick());
+        document.getElementById('gdrive-save-btn')?.addEventListener('click', () => this.saveToDrive());
+        document.getElementById('gdrive-load-btn')?.addEventListener('click', () => this.loadFromDrive());
+        document.getElementById('gdrive-disconnect-btn')?.addEventListener('click', () => this.handleSignoutClick());
+        document.getElementById('auto-sync-checkbox')?.addEventListener('change', (e) => this.toggleAutoSync(e.target.checked));
+
+        // Set initial auto-sync state
+        const checkbox = document.getElementById('auto-sync-checkbox');
+        if (checkbox) checkbox.checked = this.autoSync;
+    }
+
+    maybeInitialize() {
+        // Check if Google APIs are loaded
+        if (window.gapi && window.google) {
+            this.gapiLoaded();
+            this.gisLoaded();
+        } else {
+            // Wait for scripts to load
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    if (window.gapi) this.gapiLoaded();
+                    if (window.google) this.gisLoaded();
+                }, 1000);
+            });
+        }
+    }
+
+    gapiLoaded() {
+        gapi.load('client', async () => {
+            try {
+                await gapi.client.init({
+                    apiKey: this.API_KEY,
+                    discoveryDocs: [this.DISCOVERY_DOC],
+                });
+                this.gapiInited = true;
+                this.maybeEnableButtons();
+            } catch (error) {
+                console.log('GAPI init error:', error);
+            }
+        });
+    }
+
+    gisLoaded() {
+        try {
+            this.tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: this.CLIENT_ID,
+                scope: this.SCOPES,
+                callback: (resp) => {
+                    if (resp.error) {
+                        this.app.showStatus('sync-status', `Auth error: ${resp.error}`, 'error');
+                        return;
+                    }
+                    this.accessToken = resp.access_token;
+                    this.updateConnectionUI(true);
+                },
+            });
+            this.gisInited = true;
+            this.maybeEnableButtons();
+        } catch (error) {
+            console.log('GIS init error:', error);
+        }
+    }
+
+    maybeEnableButtons() {
+        // Only enable if user has configured API keys
+        if (!this.CLIENT_ID || !this.API_KEY) {
+            document.getElementById('gdrive-connect-btn').disabled = true;
+            document.getElementById('gdrive-connect-btn').textContent = 'Configure API Keys First';
+            const info = document.createElement('p');
+            info.className = 'info-text';
+            info.innerHTML = 'See README for instructions on setting up Google Drive sync.';
+            document.getElementById('gdrive-not-connected').appendChild(info);
+        }
+    }
+
+    handleAuthClick() {
+        if (!this.CLIENT_ID || !this.API_KEY) {
+            alert('Please configure your Google Drive API credentials first. See the README for instructions.');
+            return;
+        }
+
+        this.tokenClient.callback = async (resp) => {
+            if (resp.error) {
+                this.app.showStatus('sync-status', `Auth error: ${resp.error}`, 'error');
+                return;
+            }
+            this.accessToken = resp.access_token;
+            this.updateConnectionUI(true);
+            this.app.showStatus('sync-status', 'Connected to Google Drive!', 'success');
+            setTimeout(() => this.app.hideStatus('sync-status'), 3000);
+        };
+
+        if (gapi.client.getToken() === null) {
+            this.tokenClient.requestAccessToken({ prompt: 'consent' });
+        } else {
+            this.tokenClient.requestAccessToken({ prompt: '' });
+        }
+    }
+
+    handleSignoutClick() {
+        const token = gapi.client.getToken();
+        if (token !== null) {
+            google.accounts.oauth2.revoke(token.access_token);
+            gapi.client.setToken('');
+        }
+        this.accessToken = null;
+        this.fileId = null;
+        localStorage.removeItem('gdrive_file_id');
+        localStorage.removeItem('auto_sync');
+        this.updateConnectionUI(false);
+        this.app.showStatus('sync-status', 'Disconnected from Google Drive', 'info');
+        setTimeout(() => this.app.hideStatus('sync-status'), 3000);
+    }
+
+    updateConnectionUI(connected) {
+        if (connected) {
+            document.getElementById('gdrive-not-connected').style.display = 'none';
+            document.getElementById('gdrive-connected').style.display = 'block';
+            const token = gapi.client.getToken();
+            if (token && token.email) {
+                document.getElementById('gdrive-user-email').textContent = token.email;
+            }
+        } else {
+            document.getElementById('gdrive-not-connected').style.display = 'block';
+            document.getElementById('gdrive-connected').style.display = 'none';
+        }
+    }
+
+    async saveToDrive() {
+        if (!this.accessToken) {
+            this.app.showStatus('sync-status', 'Please connect to Google Drive first', 'error');
+            return;
+        }
+
+        try {
+            const data = {
+                cards: this.app.store.cards,
+                perks: this.app.store.perks,
+                usage: this.app.store.usage,
+                exportDate: new Date().toISOString(),
+                version: '1.0'
+            };
+
+            const content = JSON.stringify(data, null, 2);
+            const metadata = {
+                name: this.FILE_NAME,
+                mimeType: 'application/json',
+            };
+
+            let response;
+            if (this.fileId) {
+                // Update existing file
+                response = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${this.fileId}?uploadType=multipart`, {
+                    method: 'PATCH',
+                    headers: new Headers({ Authorization: 'Bearer ' + this.accessToken }),
+                    body: content,
+                });
+            } else {
+                // Create new file
+                const boundary = '-------314159265358979323846';
+                const delimiter = "\r\n--" + boundary + "\r\n";
+                const close_delim = "\r\n--" + boundary + "--";
+
+                const multipartRequestBody =
+                    delimiter +
+                    'Content-Type: application/json\r\n\r\n' +
+                    JSON.stringify(metadata) +
+                    delimiter +
+                    'Content-Type: application/json\r\n\r\n' +
+                    content +
+                    close_delim;
+
+                response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: new Headers({
+                        'Authorization': 'Bearer ' + this.accessToken,
+                        'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+                    }),
+                    body: multipartRequestBody,
+                });
+
+                const result = await response.json();
+                this.fileId = result.id;
+                localStorage.setItem('gdrive_file_id', this.fileId);
+            }
+
+            if (response.ok) {
+                const now = new Date().toLocaleString();
+                document.getElementById('last-sync-time').textContent = now;
+                this.app.showStatus('sync-status', 'Saved to Google Drive successfully!', 'success');
+                setTimeout(() => this.app.hideStatus('sync-status'), 3000);
+            } else {
+                throw new Error('Save failed');
+            }
+        } catch (error) {
+            this.app.showStatus('sync-status', `Save failed: ${error.message}`, 'error');
+        }
+    }
+
+    async loadFromDrive() {
+        if (!this.accessToken) {
+            this.app.showStatus('sync-status', 'Please connect to Google Drive first', 'error');
+            return;
+        }
+
+        try {
+            // Find the file
+            if (!this.fileId) {
+                const searchResponse = await fetch(
+                    `https://www.googleapis.com/drive/v3/files?q=name='${this.FILE_NAME}'`,
+                    {
+                        headers: new Headers({ Authorization: 'Bearer ' + this.accessToken }),
+                    }
+                );
+                const searchResult = await searchResponse.json();
+
+                if (!searchResult.files || searchResult.files.length === 0) {
+                    this.app.showStatus('sync-status', 'No backup found on Google Drive', 'info');
+                    return;
+                }
+
+                this.fileId = searchResult.files[0].id;
+                localStorage.setItem('gdrive_file_id', this.fileId);
+            }
+
+            // Load the file
+            const response = await fetch(
+                `https://www.googleapis.com/drive/v3/files/${this.fileId}?alt=media`,
+                {
+                    headers: new Headers({ Authorization: 'Bearer ' + this.accessToken }),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Load failed');
+            }
+
+            const data = await response.json();
+
+            // Validate and import
+            if (!data.cards || !data.perks || !data.usage) {
+                throw new Error('Invalid data format');
+            }
+
+            if (!confirm('This will replace all current data with data from Google Drive. Continue?')) {
+                return;
+            }
+
+            this.app.store.cards = data.cards;
+            this.app.store.perks = data.perks;
+            this.app.store.usage = data.usage;
+            this.app.store.save('cards', this.app.store.cards);
+            this.app.store.save('perks', this.app.store.perks);
+            this.app.store.save('usage', this.app.store.usage);
+
+            this.app.renderCards();
+            this.app.renderPerks();
+            this.app.renderChecklist();
+            this.app.updateDataStats();
+
+            const now = new Date().toLocaleString();
+            document.getElementById('last-sync-time').textContent = now;
+            this.app.showStatus('sync-status', 'Loaded from Google Drive successfully!', 'success');
+            setTimeout(() => this.app.hideStatus('sync-status'), 3000);
+        } catch (error) {
+            this.app.showStatus('sync-status', `Load failed: ${error.message}`, 'error');
+        }
+    }
+
+    toggleAutoSync(enabled) {
+        this.autoSync = enabled;
+        localStorage.setItem('auto_sync', enabled.toString());
+
+        if (enabled) {
+            this.app.showStatus('sync-status', 'Auto-sync enabled', 'success');
+            setTimeout(() => this.app.hideStatus('sync-status'), 2000);
+
+            // Set up auto-save on data changes
+            const originalSave = this.app.store.save.bind(this.app.store);
+            this.app.store.save = (key, data) => {
+                originalSave(key, data);
+                if (this.autoSync && this.accessToken) {
+                    this.saveToDrive();
+                }
+            };
+        }
     }
 }
 

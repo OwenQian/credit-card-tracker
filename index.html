@@ -17,6 +17,7 @@
             <button class="tab-btn active" data-tab="checklist">Monthly Checklist</button>
             <button class="tab-btn" data-tab="cards">Manage Cards</button>
             <button class="tab-btn" data-tab="perks">Manage Perks</button>
+            <button class="tab-btn" data-tab="data">Data & Sync</button>
         </nav>
 
         <!-- Monthly Checklist Tab -->
@@ -129,8 +130,77 @@
                 </div>
             </div>
         </div>
+
+        <!-- Data & Sync Tab -->
+        <div id="data-tab" class="tab-content">
+            <h2>Data Management & Sync</h2>
+
+            <!-- Local Backup Section -->
+            <div class="data-section">
+                <h3>📥 Local Backup</h3>
+                <p>Export your data as a JSON file or import from a backup.</p>
+                <div class="data-actions">
+                    <button id="export-btn" class="btn btn-primary">Export Data</button>
+                    <label for="import-file" class="btn btn-secondary">
+                        Import Data
+                        <input type="file" id="import-file" accept=".json" style="display: none;">
+                    </label>
+                </div>
+                <div id="import-status" class="status-message"></div>
+            </div>
+
+            <!-- Google Drive Section -->
+            <div class="data-section">
+                <h3>☁️ Google Drive Sync</h3>
+                <p>Automatically sync your data across devices using Google Drive.</p>
+
+                <div id="gdrive-not-connected" class="gdrive-section">
+                    <p class="info-text">Connect your Google account to enable automatic sync.</p>
+                    <button id="gdrive-connect-btn" class="btn btn-primary">Connect Google Drive</button>
+                </div>
+
+                <div id="gdrive-connected" class="gdrive-section" style="display: none;">
+                    <p class="success-text">✓ Connected as <span id="gdrive-user-email"></span></p>
+                    <div class="data-actions">
+                        <button id="gdrive-save-btn" class="btn btn-primary">Save to Drive</button>
+                        <button id="gdrive-load-btn" class="btn btn-secondary">Load from Drive</button>
+                        <button id="gdrive-disconnect-btn" class="btn btn-danger">Disconnect</button>
+                    </div>
+                    <div class="sync-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="auto-sync-checkbox">
+                            Enable auto-sync (saves automatically on changes)
+                        </label>
+                    </div>
+                    <div id="sync-status" class="status-message"></div>
+                    <p class="info-text small">Last synced: <span id="last-sync-time">Never</span></p>
+                </div>
+            </div>
+
+            <!-- Data Info Section -->
+            <div class="data-section">
+                <h3>📊 Current Data</h3>
+                <div class="data-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Credit Cards:</span>
+                        <span class="stat-value" id="stat-cards">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Perks:</span>
+                        <span class="stat-value" id="stat-perks">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Usage Records:</span>
+                        <span class="stat-value" id="stat-usage">0</span>
+                    </div>
+                </div>
+                <button id="clear-all-data-btn" class="btn btn-danger">Clear All Data</button>
+            </div>
+        </div>
     </div>
 
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
     <script src="app.js"></script>
 </body>
 </html>
