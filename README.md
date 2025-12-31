@@ -50,14 +50,20 @@ A web application to track and manage credit card perks with configurable reset 
 
 ## Reset Cadence Details
 
-Perks are displayed in the monthly checklist based on their reset cadence:
+Perks appear in the monthly checklist throughout their entire reset period and disappear once redeemed:
 
-- **Monthly perks**: Show every month
-- **Quarterly perks**: Show only in January, April, July, and October
-- **Semi-annual perks**: Show only in January and July
-- **Annual perks**: Show only in January
+- **Monthly perks**: Show every month (resets monthly)
+- **Quarterly perks**: Show in all 3 months of the quarter until redeemed
+  - Q1: January, February, March
+  - Q2: April, May, June
+  - Q3: July, August, September
+  - Q4: October, November, December
+- **Semi-annual perks**: Show in all 6 months of the half until redeemed
+  - H1: January through June
+  - H2: July through December
+- **Annual perks**: Show in all 12 months until redeemed
 
-Usage counts are tracked per month, allowing you to see your perk utilization over time.
+Usage tracking is period-based, so once you check off a quarterly perk in February, it stays checked for the entire quarter (Feb and March), then resets in April for the next quarter.
 
 ## Examples of Credit Card Perks
 
