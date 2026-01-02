@@ -8,6 +8,8 @@ A web application to track and manage credit card perks with configurable reset 
 - **Perk Tracking**: Create perks with configurable usage limits and reset cadences
 - **Monthly Checklist**: View active perks for any month with usage tracking
 - **Flexible Reset Cadences**: Support for monthly, quarterly, semi-annually, and annually resetting perks
+- **Data Export/Import**: Backup and restore your data as JSON files
+- **Google Drive Sync**: Optional automatic cloud sync across devices
 - **Local Storage**: All data is stored locally in your browser
 - **Responsive Design**: Works on desktop and mobile devices
 
@@ -73,9 +75,58 @@ Usage tracking is period-based, so once you check off a quarterly perk in Februa
 - Free Hotel Night (Annual reset)
 - Dining Credits (Monthly reset)
 
-## Data Storage
+## Data Management & Backup
 
-All data is stored locally in your browser's localStorage. Your information never leaves your device. To backup your data, you can export the localStorage data using browser developer tools.
+### Local Storage
+
+All data is stored locally in your browser's localStorage by default. Your information stays on your device for privacy and offline access.
+
+### Export/Import
+
+**Export Data:**
+1. Go to the "Data & Sync" tab
+2. Click "Export Data"
+3. Save the JSON file to your computer
+4. Store it in iCloud Drive, Google Drive, Dropbox, or any cloud storage
+
+**Import Data:**
+1. Go to the "Data & Sync" tab
+2. Click "Import Data"
+3. Select your backup JSON file
+4. Confirm to restore your data
+
+This manual backup method works with any cloud storage service and gives you full control over your data.
+
+### Google Drive Sync (Optional)
+
+For automatic cloud sync across devices, you can enable Google Drive integration.
+
+**Setup Google Drive Sync:**
+
+1. **Create Google Cloud Project:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project
+   - Enable the Google Drive API
+
+2. **Get API Credentials:**
+   - Go to "APIs & Services" > "Credentials"
+   - Create an OAuth 2.0 Client ID (Web application type)
+   - Add your domain to authorized JavaScript origins
+   - Create an API Key
+
+3. **Configure the App:**
+   - Edit `app.js` (around line 622-623)
+   - Set `CLIENT_ID` to your OAuth 2.0 Client ID
+   - Set `API_KEY` to your API Key
+
+4. **Use Google Drive:**
+   - Go to "Data & Sync" tab
+   - Click "Connect Google Drive"
+   - Authorize the app
+   - Use "Save to Drive" and "Load from Drive" buttons
+   - Enable "Auto-sync" for automatic backups on changes
+
+**Note:** Google Drive sync is optional and requires technical setup. The export/import feature works immediately without any configuration.
 
 ## Browser Compatibility
 
